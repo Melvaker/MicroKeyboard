@@ -1,11 +1,11 @@
 // --------------------------------------------------------------------------------
 // Arduino Micro Keyboard Emulator
-// This sketch file has only been tested with the Arduino Micro.
+// The repository can be found at https://www.github.com/Melvaker/MicroKeyboard
 //
 // Please Note:
 // - The number of inputs are limited by the number of digital inputs of your
 //   selected board.
-// - This firmware currenly only supports up to 32 keyboard keys.
+// - This firmware currenly supports up to 64 keyboard keys.
 // --------------------------------------------------------------------------------
 
 // ================================================================================
@@ -16,10 +16,12 @@
 #include "Keyboard.h"
 
 // ===== Pin and Keys Definitions =====
-// Create up to 32 key binds by extending the PINS and KEYS Arrays. 
+// Create up to 64 key binds by extending the PINS and KEYS Arrays. 
 // --- CAUTION ---
 // If there are different number of defined pins and keys the arduino will
-//   enter a locked state until reset. 
+//   enter a locked state to prevent unexpected or undesirable behavior. 
+// For more details on using Keyboard Modifier keys, please see
+//   SpecialCharacterInstructions.md.
 
 const byte PINS[] = {2, 3, 4, 5, 6};
 const char KEYS[] = {'w', 'a', 's', 'd', ' '};
@@ -27,6 +29,7 @@ const char KEYS[] = {'w', 'a', 's', 'd', ' '};
 // ===== MISC Settings =====
 // Controller delay regulates how fast the microcontroller sends updates to the
 //   computer.
+// Adjust this value to get the desired controller responsiveness.
 const int controllerDelay = 50;
 
 // ================================================================================
@@ -35,8 +38,8 @@ const int controllerDelay = 50;
 
 // ===== Working Data =====
 byte buttonCount = 0;
-unsigned long activePins = 0;
-unsigned long lastActive = 0;
+uint64_t activePins = 0;
+uint64_t lastActive = 0;
 
 void setup()
 {
@@ -47,8 +50,6 @@ void setup()
   {
     SafetyLock();
   }
-
-  //Verifying each button has a 
   
   for(int i = 0; i < buttonCount; i++)
   {
