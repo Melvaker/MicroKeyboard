@@ -1,11 +1,21 @@
 // --------------------------------------------------------------------------------
 // Arduino Micro Keyboard Emulator
-// The repository can be found at https://www.github.com/Melvaker/MicroKeyboard
-//
+
+// Keyboard emulation with Arduino Micro.
+
+// Version: 1.1.0
+// Last Modified: 28 Mar 2022
+// Created: 27 Mar 2022
+// Author: Melvaker
+
+// https://www.github.com/Melvaker/MicroKeyboard
+
 // Please Note:
 // - The number of inputs are limited by the number of digital inputs of your
 //   selected board.
+// - Updates are planned to allow for hardware expansion.
 // - This firmware currenly supports up to 64 keyboard keys.
+// - This firmware features 6 key rollover due to library limits.
 // --------------------------------------------------------------------------------
 
 // ================================================================================
@@ -31,7 +41,15 @@ const char KEYS[] = {'w', 'a', 's', 'd', ' '};
 //   computer.
 // Adjust this value to get the desired controller responsiveness.
 const int controllerDelay = 50;
+// Common Values:
+// - 50 ms = 20 updates per second
+// - 40 ms = 25 updates per second
+// - 30 ms ~ 33 updates per second
+// - 20 ms = 50 updates per second
+// - 16 ms ~ 62 updates per second
 
+// --- CAUTION ---
+// Changes below this line are not advised.
 // ================================================================================
 // ==============================      FIRMWARE      ==============================
 // ================================================================================
