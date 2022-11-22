@@ -3,8 +3,8 @@
 
 // Keyboard emulation with Arduino Micro.
 
-// Version: 1.1.0
-// Last Modified: 28 Mar 2022
+// Version: 1.2.0
+// Last Modified: 21 Nov 2022
 // Created: 27 Mar 2022
 // Author: Melvaker
 
@@ -15,8 +15,16 @@
 //   selected board.
 // - Updates are planned to allow for hardware expansion.
 // - This firmware currenly supports up to 64 keyboard keys.
-// - This firmware features 6 key rollover due to library limits.
+// - This firmware features 6 key rollover due to Keyboard library design.
 // --------------------------------------------------------------------------------
+
+// ===== Data Structures =====
+// --- CAUTION: Do not make change this section. ---
+struct KeyPair
+{
+  uint8_t pinID;
+  char key;
+};
 
 // ================================================================================
 // =============================  Settings and Stuff  =============================
@@ -26,15 +34,18 @@
 #include "Keyboard.h"
 
 // ===== Pin and Keys Definitions =====
-// Create up to 64 key binds by extending the PINS and KEYS Arrays. 
-// --- CAUTION ---
-// If there are different number of defined pins and keys the arduino will
-//   enter a locked state to prevent unexpected or undesirable behavior. 
+// Create up to 64 key binds by extending the KEYS Arrays.
 // For more details on using Keyboard Modifier keys, please see
 //   SpecialCharacterInstructions.md.
 
-const byte PINS[] = {2, 3, 4, 5, 6};
-const char KEYS[] = {'w', 'a', 's', 'd', ' '};
+const KeyPair KEYS[] = 
+{
+  {2, 'w'},
+  {3, 'a'},
+  {4, 's'},
+  {5, 'd'},
+  {6, KEY_LEFT_SHIFT}
+};
 
 // ===== MISC Settings =====
 // Controller delay regulates how fast the microcontroller sends updates to the
@@ -60,18 +71,13 @@ uint64_t activePins = 0;
 uint64_t lastActive = 0;
 
 void setup()
-{
-  //Verify Pin and Key counts match.
-  buttonCount = sizeof(PINS)/sizeof(PINS[0]);
-
-  if(sizeof(KEYS)/sizeof(KEYS[0]) != buttonCount)
-  {
-    SafetyLock();
-  }
+{ 
+  //Calculate number of buttons.
+  buttonCount = sizeof(KEYS)/sizeof(KEYS[0]);
   
   for(int i = 0; i < buttonCount; i++)
   {
-    pinMode(PINS[i], INPUT_PULLUP);
+    pinMode(KEYS[i].pinID, INPUT_PULLUP);
   }
 
   Keyboard.begin();
@@ -92,9 +98,10 @@ void PressKeys()
 {
   for(int i = 0; i < buttonCount; i++)
   {
-    if(activePins & (1 << i))
+    //if(key was not previously pressed && key is currently pressed) 
+    if(!(lastActive & (1 << i)) && activePins & (1 << i))
     {
-      Keyboard.press(KEYS[i]);
+      Keyboard.press(KEYS[i].key);
     }
   }
 }
@@ -103,10 +110,13 @@ void ReadButtons()
 {
   for(int i = 0; i < buttonCount; i++)
   {
-    if(!digitalRead(PINS[i]))
+    //if(pin is low -> key is pressed) set bit high
+    if(!digitalRead(KEYS[i].pinID))
     {
       activePins |= 1 << i;
     }
+    //if(pin is high -> key not pressed) set bit low
+    //do not change other high bits
     else
     {
       activePins &= ~(1 << i);
@@ -118,14 +128,10 @@ void ReleaseKeys()
 {
   for(int i = 0; i < buttonCount; i++)
   {
-    if(!(activePins & (1 << i)))
+    //if(key was previously pressed && key is not currently pressed)
+    if((lastActive & (1 << i)) && !(activePins & (1 << i)))
     {
-      Keyboard.release(KEYS[i]);
+      Keyboard.release(KEYS[i].key);
     }
   }
-}
-
-void SafetyLock()
-{
-  while(true) { delay(500); }
 }

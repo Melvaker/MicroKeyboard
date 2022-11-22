@@ -1,3 +1,11 @@
+# Version 1.2.0
+## Features
+- Reduced dual arrays to single array of KeyPair structure for ease of setup and maintenance.
+
+## Optimizations
+- Updated PressKey function to incorporate lastActive to reduce extraneous key presses sent to the computer.
+- Updated ReleaseKey function to incorporate lastActive to reduce extraneous key presses sent to the computer.
+
 # Version 1.1.1
 ## Documentation
 - Added additional special keys to SpecialCharacterInstructions.
