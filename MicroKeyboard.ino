@@ -3,8 +3,8 @@
 
 // Keyboard emulation with Arduino Micro.
 
-// Version: 1.2.0
-// Last Modified: 21 Nov 2022
+// Version: 1.3.0
+// Last Modified: 22 Nov 2022
 // Created: 27 Mar 2022
 // Author: Melvaker
 
@@ -19,7 +19,7 @@
 // --------------------------------------------------------------------------------
 
 // ===== Data Structures =====
-// --- CAUTION: Do not make change this section. ---
+// --- CAUTION: Do not make changes this section. ---
 struct KeyPair
 {
   uint8_t pinID;
@@ -48,10 +48,10 @@ const KeyPair KEYS[] =
 };
 
 // ===== MISC Settings =====
-// Controller delay regulates how fast the microcontroller sends updates to the
+// PERIOD regulates how fast the microcontroller sends updates to the
 //   computer.
 // Adjust this value to get the desired controller responsiveness.
-const int controllerDelay = 50;
+const int PERIOD = 50;
 // Common Values:
 // - 50 ms = 20 updates per second
 // - 40 ms = 25 updates per second
@@ -69,6 +69,7 @@ const int controllerDelay = 50;
 byte buttonCount = 0;
 uint64_t activePins = 0;
 uint64_t lastActive = 0;
+uint32_t lastTime = 0;
 
 void setup()
 { 
@@ -85,13 +86,15 @@ void setup()
 
 void loop()
 {
-  ReadButtons();
-  ReleaseKeys();
-  PressKeys();
+  if(millis() > lastTime + PERIOD)
+  {
+    ReadButtons();
+    ReleaseKeys();
+    PressKeys();
 
-  lastActive = activePins;
-
-  delay(controllerDelay);
+    lastActive = activePins;
+    lastTime = millis();
+  }
 }
 
 void PressKeys()
