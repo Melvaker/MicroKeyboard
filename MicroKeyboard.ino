@@ -3,7 +3,7 @@
 
 // Keyboard emulation with Arduino Micro.
 
-// Version: 1.3.0
+// Version: 1.3.1
 // Last Modified: 22 Nov 2022
 // Created: 27 Mar 2022
 // Author: Melvaker
