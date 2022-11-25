@@ -1,3 +1,13 @@
+# Version 1.4.0 - 24 Nov 2022
+## Features
+- Added Arduino onboard pin only.
+- Added support for external hardware.
+- Added external harware only mode.
+
+# Version 1.3.1 - 22 Nov 2022
+## Documentation
+- Extended special key value table.
+
 # Version 1.3.0 - 22 Nov 2022
 ## Optimizations
 - Removed blocking delay function.
