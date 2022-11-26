@@ -3,8 +3,8 @@
 
 // Keyboard emulation with Arduino Micro.
 
-// Version: 1.4.0
-// Last Modified: 24 Nov 2022
+// Version: 1.4.1
+// Last Modified: 25 Nov 2022
 // Created: 27 Mar 2022
 // Author: Melvaker
 
@@ -93,6 +93,9 @@ const int PERIOD = 50;
 // --- WARNING ---
 // Changes below this line are not advised.
 
+// ===== Debug Mode =====
+//#define DEBUG
+
 // ===== Working Data =====
 #if MODE == 0
   byte buttonCount = 0;
@@ -125,6 +128,12 @@ void setup()
     pinMode(DATAPIN, INPUT);
     pinMode(CLOCKENABLEPIN, OUTPUT);
   #endif
+  
+  #ifdef DEBUG
+    Serial.begin(9600);
+    delay(3000);
+    Serial.println("Printing debug infomration.");
+  #endif
 
   Keyboard.begin();
 }
@@ -151,6 +160,11 @@ void loop()
       if(!(lastActive & (1 << i)) && activeKeys & (1 << i))
       {
         Keyboard.press(KEYS[i].key);
+        
+        #ifdef DEBUG
+          Serial.print("Press Key: ");
+          Serial.println(KEYS[i].key);
+        #endif
       }
     }
   }
@@ -171,6 +185,22 @@ void loop()
         activeKeys &= ~(1 << i);
       }
     }
+    
+    #ifdef DEBUG
+      long lowKeys = activeKeys;
+      long highKeys = activeKeys >> 32;
+      
+      Serial.print("Active Keys: ");
+      for(int i = 31; i >= 0; i--)
+      {
+        Serial.print(bitRead(highKeys, i));
+      }
+      for(int i = 31; i >= 0; i--)
+      {
+        Serial.print(bitRead(lowKeys, i));
+      }
+      Serial.println();
+    #endif
   }
 
   void ReleaseKeys()
@@ -181,6 +211,11 @@ void loop()
       if((lastActive & (1 << i)) && !(activeKeys & (1 << i)))
       {
         Keyboard.release(KEYS[i].key);
+        
+        #ifdef DEBUG
+          Serial.print("Release Key: ");
+          Serial.println(KEYS[i].key);
+        #endif
       }
     }
   }
@@ -194,8 +229,11 @@ void loop()
       if(!(lastActive & (1 << i)) && activeKeys & (1 << i))
       {
         Keyboard.press(HARDWAREKEYS[i]);
-        // Serial.print("Press Key: ");
-        // Serial.println(HARDWAREKEYS[i]);
+        
+        #ifdef DEBUG
+          Serial.print("Press Key: ");
+          Serial.println(HARDWAREKEYS[i]);
+        #endif
       }
     }
   }
@@ -211,19 +249,21 @@ void loop()
       activeKeys |= ReadByte();
     }
     
-    // long lowKeys = activeKeys;
-    // long highKeys = activeKeys >> 32;
-    
-    // Serial.print("Active Keys: ");
-    // for(int i = 31; i >= 0; i--)
-    // {
-    //   Serial.print(bitRead(highKeys, i));
-    // }
-    // for(int i = 31; i >= 0; i--)
-    // {
-    //   Serial.print(bitRead(lowKeys, i));
-    // }
-    // Serial.println();
+    #ifdef DEBUG
+      long lowKeys = activeKeys;
+      long highKeys = activeKeys >> 32;
+      
+      Serial.print("Active Keys: ");
+      for(int i = 31; i >= 0; i--)
+      {
+        Serial.print(bitRead(highKeys, i));
+      }
+      for(int i = 31; i >= 0; i--)
+      {
+        Serial.print(bitRead(lowKeys, i));
+      }
+      Serial.println();
+    #endif
   }
   
   byte ReadByte()
@@ -240,12 +280,14 @@ void loop()
     byte incoming = shiftIn(DATAPIN, CLOCKPIN, MSBFIRST);
     digitalWrite(CLOCKENABLEPIN, HIGH);
     
-    // Serial.print("Incoming Byte: ");
-    // for(int i = 7; i >= 0; i--)
-    // {
-    //   Serial.print(bitRead(incoming, i));
-    // }
-    // Serial.println();
+    #ifdef DEBUG
+      Serial.print("Incoming Byte: ");
+      for(int i = 7; i >= 0; i--)
+      {
+        Serial.print(bitRead(incoming, i));
+      }
+      Serial.println();
+    #endif
     
     return incoming;
   }
@@ -258,8 +300,11 @@ void loop()
       if((lastActive & (1 << i)) && !(activeKeys & (1 << i)))
       {
         Keyboard.release(HARDWAREKEYS[i]);
-        // Serial.print("Release Key: ");
-        // Serial.println(HARDWAREKEYS[i]);
+        
+        #ifdef DEBUG
+          Serial.print("Release Key: ");
+          Serial.println(HARDWAREKEYS[i]);
+        #endif
       }
     }
   }

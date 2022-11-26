@@ -1,3 +1,7 @@
+# Version 1.4.1 - 25 Nov 2022
+## Features
+- Added togglable debug mode.
+
 # Version 1.4.0 - 24 Nov 2022
 ## Features
 - Added Arduino onboard pin only.
