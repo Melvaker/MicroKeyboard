@@ -3,8 +3,8 @@
 
 // Keyboard emulation with Arduino Micro.
 
-// Version: 1.4.1
-// Last Modified: 25 Nov 2022
+// Version: 1.5.0
+// Last Modified: 01 Jan 2023
 // Created: 27 Mar 2022
 // Author: Melvaker
 
@@ -40,27 +40,30 @@ struct KeyPair
 
 // ===== Hardware Configuration =====
 // Select input mode by changeing mode value.
-#define MODE 1
+#define MODE 2
 // Modes:
 // - 0: Arduino onboard digital IO pins.
 // - 1: External hardware. Currently only the 74HC165 is supported and tested.
 //      54HC165 may also be compatible, but has not been tested.
+// - 2: Arduino onboard digital IO pins and external 74HC165.
 
 // ===== Pin and Keys Definitions =====
 // Create up to 64 key binds by extending the KEYS Arrays.
 // For more details on using Keyboard Modifier keys, please see
 //   SpecialCharacterInstructions.md.
-#if MODE == 0
+#if MODE == 0 || MODE == 2
   //Change these definitions when using onboard DIO.
   const KeyPair KEYS[] = 
   {
-    {2, 'w'},
-    {3, 'a'},
-    {4, 's'},
-    {5, 'd'},
-    {6, KEY_LEFT_SHIFT}
+    {5, 'w'},
+    {6, 'a'},
+    {7, 's'},
+    {8, 'd'},
+    {9, KEY_LEFT_SHIFT}
   };
-#elif MODE == 1
+#endif
+
+#if MODE == 1 || MODE == 2
   //Change these definitions when using external hardware.
   const char HARDWAREKEYS[] =
   {
@@ -69,10 +72,10 @@ struct KeyPair
   };
   
   //Change these definitions to match the wiring design.
-  const byte LOADPIN = 2;
-  const byte CLOCKPIN = 3;
-  const byte DATAPIN = 4;
-  const byte CLOCKENABLEPIN = 10;
+  const uint8_t LOADPIN = 2;
+  const uint8_t CLOCKPIN = 3;
+  const uint8_t DATAPIN = 4;
+  const uint8_t CLOCKENABLEPIN = 10;
 #endif
 
 // ===== Controller Timing =====
@@ -101,6 +104,9 @@ const int PERIOD = 50;
   byte buttonCount = 0;
 #elif MODE == 1
   byte hardwareButtonCount = 0;
+#elif MODE == 2
+  byte buttonCount = 0;
+  byte hardwareButtonCount = 0;
 #endif
 
 uint64_t activeKeys = 0;
@@ -109,7 +115,7 @@ uint32_t lastTime = 0;
 
 void setup()
 { 
-  #if MODE == 0
+  #if MODE == 0 || MODE == 2
     //Calculate number of buttons.
     buttonCount = sizeof(KEYS)/sizeof(KEYS[0]);
     
@@ -118,7 +124,7 @@ void setup()
     {
       pinMode(KEYS[i].pinID, INPUT_PULLUP);
     }
-  #elif MODE == 1  
+  #elif MODE == 1 || MODE == 2
     //Calculate number of buttons.
     hardwareButtonCount = sizeof(HARDWAREKEYS)/sizeof(HARDWAREKEYS[0]);
     
@@ -150,7 +156,6 @@ void loop()
     lastTime = millis();
   }
 }
-
 #if MODE == 0
   void PressKeys()
   {
@@ -219,7 +224,6 @@ void loop()
       }
     }
   }
-  
 #elif MODE == 1
   void PressKeys()
   {
@@ -242,6 +246,7 @@ void loop()
   {
     byte numberRegisters = hardwareButtonCount / 8 + 1;
     activeKeys = 0;
+    LoadButtons();
     
     for(int i = 0; i < numberRegisters; i++)
     {
@@ -266,14 +271,17 @@ void loop()
     #endif
   }
   
-  byte ReadByte()
+  void LoadButtons()
   {
-    //Load button presses into the shift register.
+    //Load button presses into the shift register(s).
     digitalWrite(LOADPIN, LOW);
     delayMicroseconds(5);
     digitalWrite(LOADPIN, HIGH);
     delayMicroseconds(5);
-    
+  }
+  
+  byte ReadByte()
+  {
     //Read data from 165 shift register.
     digitalWrite(CLOCKPIN, HIGH);
     digitalWrite(CLOCKENABLEPIN, LOW);
@@ -294,6 +302,143 @@ void loop()
   
   void ReleaseKeys()
   {
+    for(int i = 0; i < hardwareButtonCount; i++)
+    {
+      //if(key was previously pressed && key is not currently pressed)
+      if((lastActive & (1 << i)) && !(activeKeys & (1 << i)))
+      {
+        Keyboard.release(HARDWAREKEYS[i]);
+        
+        #ifdef DEBUG
+          Serial.print("Release Key: ");
+          Serial.println(HARDWAREKEYS[i]);
+        #endif
+      }
+    }
+  }
+#elif MODE == 2
+  void PressKeys()
+  {
+    //Arduino DIO
+    for(int i = 0; i < buttonCount; i++)
+    {
+      //if(key was not previously pressed && key is currently pressed)
+      if(!(lastActive & (1 << i + hardwareButtonCount)) && activeKeys & (1 << i + hardwareButtonCount))
+      {
+        Keyboard.press(KEYS[i].key);
+        
+        #ifdef DEBUG
+          Serial.print("Press Key: ");
+          Serial.println(KEYS[i].key);
+        #endif
+      }
+    }
+    
+    //Hardware Keys
+    for(int i = 0; i < hardwareButtonCount; i++)
+    {
+      //if(key was not previously pressed && key is currently pressed)
+      if(!(lastActive & (1 << i)) && activeKeys & (1 << i))
+      {
+        Keyboard.press(HARDWAREKEYS[i]);
+        
+        #ifdef DEBUG
+          Serial.print("Press Key: ");
+          Serial.println(HARDWAREKEYS[i]);
+        #endif
+      }
+    }
+  }
+  
+  void ReadButtons()
+  {
+    //Reset Active Keys
+    activeKeys = 0;
+    
+    //Arduino DIO
+    for(int i = 0; i < buttonCount; i++)
+    {
+      //if(pin is low -> key is pressed) set bit high
+      if(!digitalRead(KEYS[i].pinID))
+      {
+        activeKeys |= 1 << i;
+      }
+    }
+    
+    //Shift active keys to make room for hardware buttons
+    activeKeys = activeKeys << hardwareButtonCount;
+    
+    //Hardware Keys
+    byte numberRegisters = hardwareButtonCount / 8 + 1;
+    LoadButtons();
+    
+    for(int i = 0; i < numberRegisters; i++)
+    {
+      activeKeys << i * 8;
+      activeKeys |= ReadByte();
+    }
+    
+    #ifdef DEBUG
+      long lowKeys = activeKeys;
+      long highKeys = activeKeys >> 32;
+      
+      Serial.print("Active Kys: ");
+      for(int i = 31; i >= 0; i--)
+      {
+        Serial.print(bitRead(highKeys, i));
+      }
+      for(int i = 31; i >= 0; i--)
+      {
+        Serial.print(bitRead(lowKeys, i));
+      }
+      Serial.println();
+    #endif
+  }
+  
+  void LoadButtons()
+  {
+    //Load button presses into the shift register(s).
+    digitalWrite(LOADPIN, LOW);
+    delayMicroseconds(5);
+    digitalWrite(LOADPIN, HIGH);
+    delayMicroseconds(5);
+  }
+  
+  byte ReadByte()
+  {
+    digitalWrite(CLOCKPIN, HIGH);
+    digitalWrite(CLOCKENABLEPIN, LOW);
+    byte incoming = shiftIn(DATAPIN, CLOCKPIN, MSBFIRST);
+    digitalWrite(CLOCKENABLEPIN, HIGH);
+    
+    #ifdef DEBUG
+      Serial.print("Incoming Byte: ");
+      for(int i = 7; i >= =; i--)
+      {
+        Serial.print(bitRead(incoming, i));
+      }
+      Serial.println();
+    #endif
+  }
+  
+  void ReleaseKeys()
+  {
+    //Arduino DIO
+    for(int i = 0; i < buttonCount; i++)
+    {
+      //if(key was previously pressed && key is not currently pressed)
+      if((lastActive & (1 << (i + hardwareButtonCount))) && !(activeKeys & (1 << (i + hardwareButtonCount))))
+      {
+        Keyboard.release(KEYS[i].key);
+        
+        #ifdef Debug
+          Serial.print("Release Key: ");
+          Serial.println(KEYS[i].key);
+        #endif
+      }
+    }
+    
+    //Hardware Keys
     for(int i = 0; i < hardwareButtonCount; i++)
     {
       //if(key was previously pressed && key is not currently pressed)

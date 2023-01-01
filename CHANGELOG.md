@@ -1,3 +1,10 @@
+# Version 1.5.0 - 01 Jan 2023
+## Features
+- Added dual input method mode.
+
+## Bug Fixes
+- Firmware now reads multiple shift registers correctly.
+
 # Version 1.4.1 - 25 Nov 2022
 ## Features
 - Added togglable debug mode.
